@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>crush.</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #ffffff;
+  --warm: #faf8f5;
+  --ink: #1c1917;
+  --mid: #78716c;
+  --faint: #e7e5e4;
+  --accent: #9b6dbf;
+  --accent-bg: #f5f0fb;
+  --radius: 20px;
+}
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--ink); font-weight: 300; min-height: 100vh; }
+
+nav { max-width: 480px; margin: 0 auto; padding: 2.5rem 1.5rem 0; }
+.logo { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 1.5rem; color: var(--accent); }
+
+main { max-width: 480px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+.hero { text-align: center; margin-bottom: 2.5rem; }
+.hero-emoji { font-size: 2.8rem; display: block; margin-bottom: 1.2rem; animation: sway 3s ease-in-out infinite; }
+@keyframes sway { 0%,100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+h1 { font-family: 'Instrument Serif', serif; font-size: clamp(1.8rem, 6vw, 2.6rem); line-height: 1.15; font-weight: 400; letter-spacing: -0.02em; margin-bottom: 0.8rem; }
+h1 em { font-style: italic; color: var(--accent); }
+.hero-sub { font-size: 0.88rem; color: var(--mid); line-height: 1.65; max-width: 340px; margin: 0 auto; }
+
+/* PAGE 0 buttons */
+.entry-buttons { display: flex; flex-direction: column; gap: 1rem; }
+.entry-btn {
+  width: 100%;
+  padding: 1.4rem 1.5rem;
+  background: var(--accent-bg);
+  border: 1.5px solid rgba(155,109,191,0.25);
+  border-radius: var(--radius);
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.entry-btn:hover { background: #ede0fb; border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(155,109,191,0.15); }
+.entry-btn-emoji { font-size: 1.6rem; flex-shrink: 0; }
+.entry-btn-text { display: flex; flex-direction: column; gap: 0.2rem; }
+.entry-btn-title { font-size: 0.92rem; font-weight: 500; color: var(--ink); }
+.entry-btn-sub { font-size: 0.75rem; font-weight: 300; color: var(--mid); }
+
+.card { background: var(--warm); border: 1px solid var(--faint); border-radius: var(--radius); padding: 2rem; }
+
+.field { margin-bottom: 0.85rem; }
+label { display: block; font-size: 0.65rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mid); margin-bottom: 0.4rem; }
+input[type="email"], input[type="text"] { width: 100%; padding: 0.85rem 1rem; background: white; border: 1.5px solid var(--faint); border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 0.9rem; font-weight: 300; color: var(--ink); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+input::placeholder { color: #c4bfba; }
+input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(155,109,191,0.08); }
+
+.btn { width: 100%; padding: 1rem; background: var(--ink); color: white; border: none; border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 0.88rem; font-weight: 400; cursor: pointer; transition: all 0.18s; margin-top: 0.8rem; }
+.btn:hover { background: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(155,109,191,0.25); }
+.btn:active { transform: translateY(0); box-shadow: none; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-soft { width: 100%; padding: 0.8rem; background: none; border: 1.5px solid var(--faint); border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 300; color: var(--mid); cursor: pointer; margin-top: 0.5rem; transition: all 0.18s; }
+.btn-soft:hover { border-color: var(--mid); color: var(--ink); }
+
+.err { font-size: 0.75rem; color: #be123c; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 10px; padding: 0.65rem 0.9rem; margin-top: 0.7rem; display: none; }
+.err.show { display: block; }
+
+/* slots */
+.slots { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
+.slot { display: flex; align-items: center; gap: 0.75rem; background: white; border: 1.5px solid var(--faint); border-radius: 12px; padding: 0.75rem 1rem; transition: border-color 0.2s; }
+.slot.active-slot { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(155,109,191,0.08); }
+.slot.done { border-color: #d1fae5; background: #f0fdf4; }
+.slot.done .slot-num { background: #10b981; color: white; border-color: #10b981; }
+.slot-num { width: 26px; height: 26px; border-radius: 50%; background: var(--accent-bg); border: 1.5px solid rgba(155,109,191,0.3); color: var(--accent); font-size: 0.68rem; font-weight: 500; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.slot input { flex: 1; border: none; background: transparent; font-family: 'Inter', sans-serif; font-size: 0.88rem; font-weight: 300; color: var(--ink); outline: none; padding: 0; }
+.slot input::placeholder { color: #c4bfba; }
+.slot input:disabled { color: var(--mid); }
+.slot-check { color: #10b981; font-size: 1rem; display: none; }
+.slot.done .slot-check { display: block; }
+.counter { font-size: 0.72rem; color: var(--mid); text-align: center; margin-bottom: 1.2rem; }
+.counter strong { color: var(--accent); }
+
+/* anon badge */
+.anon-badge { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: var(--accent); background: var(--accent-bg); border-radius: 10px; padding: 0.65rem 0.9rem; margin-bottom: 1.2rem; }
+
+/* result cards */
+.result-card { background: var(--warm); border: 1px solid var(--faint); border-radius: var(--radius); padding: 2.5rem 2rem; text-align: center; }
+.result-emoji { font-size: 2.5rem; display: block; margin-bottom: 1rem; animation: pulse 2.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+.result-title { font-family: 'Instrument Serif', serif; font-size: 1.8rem; font-weight: 400; line-height: 1.15; margin-bottom: 0.8rem; }
+.result-title em { font-style: italic; color: var(--accent); }
+.result-body { font-size: 0.82rem; color: var(--mid); line-height: 1.65; max-width: 300px; margin: 0 auto 1.5rem; }
+.result-badge { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.65rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); background: var(--accent-bg); padding: 0.45rem 1rem; border-radius: 100px; }
+
+.match-card { background: var(--accent); border-radius: var(--radius); padding: 2.5rem 2rem; text-align: center; color: white; box-shadow: 0 8px 40px rgba(155,109,191,0.3); }
+.match-emoji { font-size: 3rem; display: block; margin-bottom: 1rem; animation: pop 0.5s cubic-bezier(0.17,0.89,0.32,1.49) forwards; }
+@keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+.match-title { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 2rem; font-weight: 400; margin-bottom: 0.7rem; line-height: 1.1; }
+.match-body { font-size: 0.82rem; line-height: 1.65; opacity: 0.88; }
+.match-email { display: inline-block; background: rgba(255,255,255,0.2); border-radius: 10px; padding: 0.6rem 1.2rem; font-size: 0.9rem; font-weight: 400; margin: 1rem 0; }
+
+.spin { display: inline-block; width: 14px; height: 14px; border: 1.5px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spinning 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spinning { to { transform: rotate(360deg); } }
+
+.panel { display: none; }
+.panel.active { display: block; }
+
+footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-spacing: 0.08em; color: #d4cdc8; }
+</style>
+</head>
+<body>
+
+<nav><div class="logo">crush.</div></nav>
+<main>
+
+  <!-- PAGE 0 — Accueil -->
+  <div id="p0" class="panel active">
+    <div class="hero">
+      <span class="hero-emoji">💜</span>
+      <h1>Someone at ESSEC<br>has a <em>crush</em> on you.</h1>
+      <p class="hero-sub">Find out — anonymously.</p>
+    </div>
+    <div class="entry-buttons">
+      <button class="entry-btn" onclick="startFlow('A')">
+        <div class="entry-btn-emoji">💌</div>
+        <div class="entry-btn-text">
+          <div class="entry-btn-title">I received an email</div>
+          <div class="entry-btn-sub">Someone has a crush on me — I want to find out who</div>
+        </div>
+      </button>
+      <button class="entry-btn" onclick="startFlow('B')">
+        <div class="entry-btn-emoji">🫶</div>
+        <div class="entry-btn-text">
+          <div class="entry-btn-title">I have a crush on someone</div>
+          <div class="entry-btn-sub">I want to tell them anonymously</div>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <!-- FLOW A — Page A1: email + code -->
+  <div id="pA1" class="panel">
+    <div class="hero">
+      <span class="hero-emoji">💌</span>
+      <h1>Someone has a<br><em>crush</em> on you.</h1>
+      <p class="hero-sub">Want to know who?</p>
+    </div>
+    <div class="card">
+      <div class="field">
+        <label>Your email</label>
+        <input type="email" id="emailA" placeholder="you@email.com">
+      </div>
+      <div class="err" id="errA1"></div>
+      <button class="btn" id="btnA1" onclick="sendCode('A')">Find out →</button>
+    </div>
+  </div>
+
+  <!-- FLOW A — Page A1b: verify -->
+  <div id="pA1b" class="panel">
+    <div class="hero">
+      <span class="hero-emoji">📬</span>
+      <h1>Check your<br><em>inbox</em></h1>
+      <p class="hero-sub">We sent a 6-digit code to <strong id="emailDisplayA" style="color:var(--ink)"></strong></p>
+    </div>
+    <div class="card">
+      <div class="field">
+        <label>6-digit code</label>
+        <input type="text" id="codeA" placeholder="123456" maxlength="6" inputmode="numeric" style="text-align:center;letter-spacing:0.3em;font-size:1.3rem;">
+      </div>
+      <div class="err" id="errA1b"></div>
+      <button class="btn" id="btnA1b" onclick="verifyCode('A')">Verify →</button>
+      <button class="btn-soft" onclick="show('pA1')">← Use a different email</button>
+    </div>
+  </div>
+
+  <!-- FLOW A — Page A2: 3 crush slots -->
+  <div id="pA2" class="panel">
+    <div class="hero">
+      <span class="hero-emoji">🫶</span>
+      <h1>We'll only reveal it if<br>they're also <em>yours.</em></h1>
+      <p class="hero-sub">Who's your crush? You have 3 tries.</p>
+    </div>
+    <div class="card">
+      <div class="counter"><strong id="slotsLeftA">3</strong> crush(es) remaining</div>
+      <div class="slots">
+        <div class="slot active-slot" id="slotA0"><div class="slot-num">1</div><input type="email" id="crushA0" placeholder="their email" autocomplete="off"><span class="slot-check">✓</span></div>
+        <div class="slot" id="slotA1"><div class="slot-num">2</div><input type="email" id="crushA1" placeholder="or someone else?" autocomplete="off" disabled><span class="slot-check">✓</span></div>
+        <div class="slot" id="slotA2"><div class="slot-num">3</div><input type="email" id="crushA2" placeholder="last one..." autocomplete="off" disabled><span class="slot-check">✓</span></div>
+      </div>
+      <div class="err" id="errA2"></div>
+      <button class="btn" id="btnA2" onclick="submitCrush('A')">Send →</button>
+    </div>
+  </div>
+
+  <!-- FLOW B — Page B1: email + code -->
+  <div id="pB1" class="panel">
+    <div class="hero">
+      <span class="hero-emoji">🫶</span>
+      <h1>Tell them<br><em>anonymously.</em></h1>
+      <p class="hero-sub">They'll never know it's you — unless they feel the same.</p>
+    </div>
+    <div class="card">
+      <div class="field">
+        <label>Your email</label>
+        <input type="email" id="emailB" placeholder="you@email.com">
+      </div>
+      <div class="err" id="errB1"></div>
+      <button class="btn" id="btnB1" onclick="sendCode('B')">Continue →</button>
+    </div>
+  </div>
+
+  <!-- FLOW B — Page B1b: verify -->
+  <div id="pB1b" class="panel">
+    <div class="hero">
+      <span class="hero-emoji">📬</span>
+      <h1>Check your<br><em>inbox</em></h1>
+      <p class="hero-sub">We sent a 6-digit code to <strong id="emailDisplayB" style="color:var(--ink)"></strong></p>
+    </div>
+    <div class="card">
+      <div class="field">
+        <label>6-digit code</label>
+        <input type="text" id="codeB" placeholder="123456" maxlength="6" inputmode="numeric" style="text-align:center;letter-spacing:0.3em;font-size:1.3rem;">
+      </div>
+      <div class="err" id="errB1b"></div>
+      <button class="btn" id="btnB1b" onclick="verifyCode('B')">Verify →</button>
+      <button class="btn-soft" onclick="show('pB1')">← Use a different email</button>
+    </div>
+  </div>
+
+  <!-- FLOW B — Page B2: 3 crush slots -->
+  <div id="pB2" class="panel">
+    <div class="hero">
+      <span class="hero-emoji">💜</span>
+      <h1>Who do you<br>have a <em>crush</em> on?</h1>
+      <p class="hero-sub">You can add up to 3 people.</p>
+    </div>
+    <div class="card">
+      <div class="anon-badge">🔒 Everything is sent anonymously — your name is never revealed.</div>
+      <div class="counter"><strong id="slotsLeftB">3</strong> crush(es) remaining</div>
+      <div class="slots">
+        <div class="slot active-slot" id="slotB0"><div class="slot-num">1</div><input type="email" id="crushB0" placeholder="their email" autocomplete="off"><span class="slot-check">✓</span></div>
+        <div class="slot" id="slotB1"><div class="slot-num">2</div><input type="email" id="crushB1" placeholder="someone else?" autocomplete="off" disabled><span class="slot-check">✓</span></div>
+        <div class="slot" id="slotB2"><div class="slot-num">3</div><input type="email" id="crushB2" placeholder="last one..." autocomplete="off" disabled><span class="slot-check">✓</span></div>
+      </div>
+      <div class="err" id="errB2"></div>
+      <button class="btn" id="btnB2" onclick="submitCrush('B')">Send anonymously →</button>
+    </div>
+  </div>
+
+  <!-- MATCH (shared) -->
+  <div id="pMatch" class="panel">
+    <div class="match-card">
+      <span class="match-emoji">✨</span>
+      <div class="match-title" id="matchTitle">They're your crush too.</div>
+      <p class="match-body">Here's their email —</p>
+      <div class="match-email" id="matchEmail">—</div>
+      <p class="match-body">Go grab a drink at the Foy's, a coffee, whatever feels right. 🍻</p>
+    </div>
+  </div>
+
+  <!-- A — No match -->
+  <div id="pANoMatch" class="panel">
+    <div class="result-card">
+      <span class="result-emoji">🤍</span>
+      <div class="result-title">Not this<br><em>time.</em></div>
+      <p class="result-body">But we've anonymously let them know someone has a crush on them — just like the email you received. If any of them ever add you back, you'll both find out.</p>
+      <div class="result-badge">✓ your identity stays hidden</div>
+    </div>
+  </div>
+
+  <!-- B — No match -->
+  <div id="pBNoMatch" class="panel">
+    <div class="result-card">
+      <span class="result-emoji">🌸</span>
+      <div class="result-title">Done.<br><em>Anonymously.</em></div>
+      <p class="result-body">Your crushes have been notified anonymously. If any of them feel the same, you'll both get an email.</p>
+      <div class="result-badge">✓ your identity stays hidden</div>
+    </div>
+  </div>
+
+  <!-- Already done -->
+  <div id="pAlready" class="panel">
+    <div class="result-card">
+      <span class="result-emoji">🌸</span>
+      <div class="result-title">Still<br><em>waiting.</em></div>
+      <p class="result-body">You've already used your tries. Your secret is safe — if any of them ever add you back, you'll both find out.</p>
+      <div class="result-badge">✓ your secret is protected</div>
+    </div>
+  </div>
+
+</main>
+<footer>crush · anonymous & confidential</footer>
+
+<script>
+  const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+  const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+  const EJS_SERVICE  = 'YOUR_EMAILJS_SERVICE_ID';
+  const EJS_PUBKEY   = 'YOUR_EMAILJS_PUBLIC_KEY';
+  const TPL_CODE     = 'YOUR_CODE_TEMPLATE_ID';
+  const TPL_NOTIFY   = 'YOUR_NOTIFY_TEMPLATE_ID';
+  const TPL_MATCH    = 'YOUR_MATCH_TEMPLATE_ID';
+
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // State per flow
+  const state = {
+    A: { email: '', code: '', slot: 0, submitted: [] },
+    B: { email: '', code: '', slot: 0, submitted: [] }
+  };
+
+  function show(id) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function showErr(id, msg) { const e = document.getElementById(id); e.textContent = msg; e.classList.add('show'); }
+  function clearErr(id) { document.getElementById(id).classList.remove('show'); }
+
+  function setBtn(id, loading, label) {
+    const b = document.getElementById(id);
+    b.disabled = loading;
+    b.innerHTML = loading ? '<span class="spin"></span>' : label;
+  }
+
+  function makeCode() { return Math.floor(100000 + Math.random() * 900000).toString(); }
+
+  function startFlow(flow) {
+    show(flow === 'A' ? 'pA1' : 'pB1');
+  }
+
+  async function ejsSend(tpl, params) {
+    const r = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ service_id: EJS_SERVICE, template_id: tpl, user_id: EJS_PUBKEY, template_params: params })
+    });
+    if (!r.ok) throw new Error('email failed');
+  }
+
+  async function sendCode(flow) {
+    const errId = `err${flow}1`;
+    const inputId = `email${flow}`;
+    const btnId = `btn${flow}1`;
+    clearErr(errId);
+
+    const val = document.getElementById(inputId).value.trim().toLowerCase();
+    if (!val) return showErr(errId, 'Please enter your email.');
+
+    state[flow].email = val;
+    state[flow].code = makeCode();
+    setBtn(btnId, true, '');
+
+    try {
+      await ejsSend(TPL_CODE, { to_email: val, code: state[flow].code });
+      document.getElementById(`emailDisplay${flow}`).textContent = val;
+      show(`p${flow}1b`);
+    } catch { showErr(errId, 'Could not send — please try again.'); }
+
+    setBtn(btnId, false, flow === 'A' ? 'Find out →' : 'Continue →');
+  }
+
+  function isExpired(createdAt, recipientSeenAt) {
+    const now = new Date();
+    if (recipientSeenAt) {
+      // Julie connected — expires 2 weeks after her connection
+      return (now - new Date(recipientSeenAt)) > 14 * 24 * 60 * 60 * 1000;
+    } else {
+      // Julie never connected — expires after 30 days, slot freed but stays in DB
+      return (now - new Date(createdAt)) > 30 * 24 * 60 * 60 * 1000;
+    }
+  }
+
+  async function verifyCode(flow) {
+    const errId = `err${flow}1b`;
+    const inputId = `code${flow}`;
+    clearErr(errId);
+
+    const entered = document.getElementById(inputId).value.trim();
+    if (!entered) return showErr(errId, 'Please enter the code.');
+    if (entered !== state[flow].code) return showErr(errId, 'Incorrect code — check your inbox.');
+
+    // Mark recipient_seen_at on all crushes where this user is the recipient
+    const now = new Date().toISOString();
+    await sb.from('crushes')
+      .update({ recipient_seen_at: now })
+      .eq('to_email', state[flow].email)
+      .is('recipient_seen_at', null);
+
+    const { data: allCrushes } = await sb.from('crushes').select('id, to_email, matched, created_at, recipient_seen_at, slot_freed')
+      .eq('from_email', state[flow].email);
+
+    if (!allCrushes) { show(`p${flow}2`); return; }
+
+    // Free slots for expired non-matched crushes (keep in DB)
+    for (const d of allCrushes.filter(d => !d.matched && isExpired(d.created_at, d.recipient_seen_at))) {
+      await sb.from('crushes').update({ slot_freed: true }).eq('id', d.id);
+    }
+
+    // Active = matched or not expired and not slot_freed
+    const active = allCrushes.filter(d => d.matched || (!d.slot_freed && !isExpired(d.created_at, d.recipient_seen_at)));
+
+    // Check for match
+    const match = active.find(d => d.matched);
+    if (match) {
+      document.getElementById('matchEmail').textContent = match.to_email;
+      document.getElementById('matchTitle').textContent = flow === 'B'
+        ? 'Oh wait — one of them has a crush on you too.'
+        : 'They\'re your crush too.';
+      show('pMatch');
+      return;
+    }
+
+    // Restore active slots
+    active.forEach((d, i) => {
+      state[flow].submitted.push(d.to_email);
+      const slot = document.getElementById(`slot${flow}${i}`);
+      const input = document.getElementById(`crush${flow}${i}`);
+      input.value = d.to_email;
+      input.disabled = true;
+      slot.classList.remove('active-slot');
+      slot.classList.add('done');
+    });
+
+    state[flow].slot = active.length;
+
+    if (state[flow].slot >= 3) { show('pAlready'); return; }
+
+    document.getElementById(`slot${flow}${state[flow].slot}`).classList.add('active-slot');
+    document.getElementById(`crush${flow}${state[flow].slot}`).disabled = false;
+    document.getElementById(`slotsLeft${flow}`).textContent = 3 - state[flow].slot;
+
+    show(`p${flow}2`);
+  }
+
+  async function submitCrush(flow) {
+    const errId = `err${flow}2`;
+    const s = state[flow];
+    clearErr(errId);
+
+    const crush = document.getElementById(`crush${flow}${s.slot}`).value.trim().toLowerCase();
+    if (!crush) return showErr(errId, 'Please enter an email.');
+    if (crush === s.email) return showErr(errId, 'It has to be someone else 🌸');
+    if (s.submitted.includes(crush)) return showErr(errId, 'You already added this email.');
+
+    const btnId = `btn${flow}2`;
+    setBtn(btnId, true, '');
+
+    try {
+      // Check mutual match — only against active (non-expired, non-freed) crushes
+      const { data: rev } = await sb.from('crushes').select('id, slot_freed, created_at, recipient_seen_at')
+        .eq('from_email', crush).eq('to_email', s.email).maybeSingle();
+      const revActive = rev && !rev.slot_freed && !isExpired(rev.created_at, rev.recipient_seen_at);
+
+      await sb.from('crushes').insert({ from_email: s.email, to_email: crush, matched: !!revActive });
+      s.submitted.push(crush);
+
+      if (revActive) {
+        await sb.from('crushes').update({ matched: true }).eq('from_email', crush).eq('to_email', s.email);
+        await ejsSend(TPL_MATCH, { to_email: s.email, partner_email: crush });
+        await ejsSend(TPL_MATCH, { to_email: crush, partner_email: s.email });
+        document.getElementById('matchEmail').textContent = crush;
+        document.getElementById('matchTitle').textContent = flow === 'B'
+          ? 'Oh wait — one of them has a crush on you too.'
+          : 'They\'re your crush too.';
+        setBtn(btnId, false, 'Send →');
+        show('pMatch');
+        return;
+      }
+
+      // No match — notify anonymously (only if they haven't been notified before)
+      const { data: prevNotif } = await sb.from('crushes').select('id')
+        .eq('to_email', crush).limit(1).maybeSingle();
+      if (!prevNotif) {
+        await ejsSend(TPL_NOTIFY, { to_email: crush });
+      }
+
+      // Mark slot done
+      const slot = document.getElementById(`slot${flow}${s.slot}`);
+      slot.classList.remove('active-slot');
+      slot.classList.add('done');
+      document.getElementById(`crush${flow}${s.slot}`).disabled = true;
+      s.slot++;
+
+      if (s.slot >= 3) {
+        setBtn(btnId, false, 'Send →');
+        show(flow === 'A' ? 'pANoMatch' : 'pBNoMatch');
+      } else {
+        document.getElementById(`slotsLeft${flow}`).textContent = 3 - s.slot;
+        const nextSlot = document.getElementById(`slot${flow}${s.slot}`);
+        const nextInput = document.getElementById(`crush${flow}${s.slot}`);
+        nextSlot.classList.add('active-slot');
+        nextInput.disabled = false;
+        nextInput.focus();
+        const label = s.slot === 2
+          ? (flow === 'A' ? 'Send last crush →' : 'Send last one anonymously →')
+          : (flow === 'A' ? 'Send →' : 'Send anonymously →');
+        setBtn(btnId, false, label);
+      }
+
+    } catch(e) {
+      showErr(errId, 'Something went wrong — please try again.');
+      setBtn(btnId, false, 'Send →');
+      console.error(e);
+    }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const a = document.querySelector('.panel.active')?.id;
+    if (a === 'pA1') sendCode('A');
+    else if (a === 'pA1b') verifyCode('A');
+    else if (a === 'pA2') submitCrush('A');
+    else if (a === 'pB1') sendCode('B');
+    else if (a === 'pB1b') verifyCode('B');
+    else if (a === 'pB2') submitCrush('B');
+  });
+</script>
+</body>
+</html>
