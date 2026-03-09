@@ -196,6 +196,7 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       </div>
       <div class="err" id="errA2"></div>
       <button class="btn" id="btnA2" onclick="submitCrush('A')">Send →</button>
+      <button class="btn-soft" id="doneA2" style="display:none;" onclick="finishFlow('A')">I'm done →</button>
     </div>
   </div>
 
@@ -251,6 +252,7 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       </div>
       <div class="err" id="errB2"></div>
       <button class="btn" id="btnB2" onclick="submitCrush('B')">Send anonymously →</button>
+      <button class="btn-soft" id="doneB2" style="display:none;" onclick="finishFlow('B')">I'm done →</button>
     </div>
   </div>
 
@@ -490,6 +492,9 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       document.getElementById(`crush${flow}${s.slot}`).disabled = true;
       s.slot++;
 
+      // Show "I'm done" button after first crush sent
+      document.getElementById(`done${flow}2`).style.display = 'block';
+
       if (s.slot >= 3) {
         setBtn(btnId, false, 'Send →');
         show(flow === 'A' ? 'pANoMatch' : 'pBNoMatch');
@@ -511,6 +516,10 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       setBtn(btnId, false, 'Send →');
       console.error(e);
     }
+  }
+
+  function finishFlow(flow) {
+    show(flow === 'A' ? 'pANoMatch' : 'pBNoMatch');
   }
 
   document.addEventListener('keydown', e => {
