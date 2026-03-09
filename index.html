@@ -252,7 +252,7 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       </div>
       <div class="err" id="errB2"></div>
       <button class="btn-soft" id="doneB2" style="display:none;" onclick="finishFlow('B')">I'm done →</button>
-      <button class="btn" id="btnB2" onclick="submitCrush('B')">Send anonymously →</button>
+      <button class="btn" id="btnB2" onclick="submitCrush('B')">Send →</button>
     </div>
   </div>
 
@@ -506,8 +506,8 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
         nextInput.disabled = false;
         nextInput.focus();
         const label = s.slot === 2
-          ? (flow === 'A' ? 'Send last crush →' : 'Send last one anonymously →')
-          : (flow === 'A' ? 'Send →' : 'Send anonymously →');
+          ? (flow === 'A' ? 'Send last crush →' : 'Send last one →')
+          : (flow === 'A' ? 'Send →' : 'Send →');
         setBtn(btnId, false, label);
       }
 
