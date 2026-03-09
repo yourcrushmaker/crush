@@ -188,14 +188,12 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       <p class="hero-sub">Who's your crush? You have 3 tries.</p>
     </div>
     <div class="card">
-      <div class="counter"><strong id="slotsLeftA">3</strong> crush(es) remaining</div>
       <div class="slots">
-        <div class="slot active-slot" id="slotA0"><div class="slot-num">1</div><input type="email" id="crushA0" placeholder="their email" autocomplete="off"><span class="slot-check">✓</span></div>
-        <div class="slot" id="slotA1"><div class="slot-num">2</div><input type="email" id="crushA1" placeholder="or someone else?" autocomplete="off" disabled><span class="slot-check">✓</span></div>
-        <div class="slot" id="slotA2"><div class="slot-num">3</div><input type="email" id="crushA2" placeholder="last one..." autocomplete="off" disabled><span class="slot-check">✓</span></div>
+        <div class="slot" id="slotA0"><div class="slot-num">1</div><input type="email" id="crushA0" placeholder="their email" autocomplete="off"><span class="slot-check">✓</span></div>
+        <div class="slot" id="slotA1"><div class="slot-num">2</div><input type="email" id="crushA1" placeholder="or someone else?" autocomplete="off"><span class="slot-check">✓</span></div>
+        <div class="slot" id="slotA2"><div class="slot-num">3</div><input type="email" id="crushA2" placeholder="last one..." autocomplete="off"><span class="slot-check">✓</span></div>
       </div>
       <div class="err" id="errA2"></div>
-      <button class="btn-soft" id="doneA2" style="display:none;" onclick="finishFlow('A')">I'm done →</button>
       <button class="btn" id="btnA2" onclick="submitCrush('A')">Send →</button>
     </div>
   </div>
@@ -244,14 +242,12 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
     </div>
     <div class="card">
       <div class="anon-badge">🔒 Everything is sent anonymously — your name is never revealed.</div>
-      <div class="counter"><strong id="slotsLeftB">3</strong> crush(es) remaining</div>
       <div class="slots">
-        <div class="slot active-slot" id="slotB0"><div class="slot-num">1</div><input type="email" id="crushB0" placeholder="their email" autocomplete="off"><span class="slot-check">✓</span></div>
-        <div class="slot" id="slotB1"><div class="slot-num">2</div><input type="email" id="crushB1" placeholder="someone else?" autocomplete="off" disabled><span class="slot-check">✓</span></div>
-        <div class="slot" id="slotB2"><div class="slot-num">3</div><input type="email" id="crushB2" placeholder="last one..." autocomplete="off" disabled><span class="slot-check">✓</span></div>
+        <div class="slot" id="slotB0"><div class="slot-num">1</div><input type="email" id="crushB0" placeholder="their email" autocomplete="off"><span class="slot-check">✓</span></div>
+        <div class="slot" id="slotB1"><div class="slot-num">2</div><input type="email" id="crushB1" placeholder="someone else?" autocomplete="off"><span class="slot-check">✓</span></div>
+        <div class="slot" id="slotB2"><div class="slot-num">3</div><input type="email" id="crushB2" placeholder="last one..." autocomplete="off"><span class="slot-check">✓</span></div>
       </div>
       <div class="err" id="errB2"></div>
-      <button class="btn-soft" id="doneB2" style="display:none;" onclick="finishFlow('B')">I'm done →</button>
       <button class="btn" id="btnB2" onclick="submitCrush('B')">Send →</button>
     </div>
   </div>
@@ -420,24 +416,19 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       return;
     }
 
-    // Restore active slots
+    // Restore submitted slots
     active.forEach((d, i) => {
       state[flow].submitted.push(d.to_email);
       const slot = document.getElementById(`slot${flow}${i}`);
       const input = document.getElementById(`crush${flow}${i}`);
       input.value = d.to_email;
       input.disabled = true;
-      slot.classList.remove('active-slot');
       slot.classList.add('done');
     });
 
     state[flow].slot = active.length;
 
     if (state[flow].slot >= 3) { show('pAlready'); return; }
-
-    document.getElementById(`slot${flow}${state[flow].slot}`).classList.add('active-slot');
-    document.getElementById(`crush${flow}${state[flow].slot}`).disabled = false;
-    document.getElementById(`slotsLeft${flow}`).textContent = 3 - state[flow].slot;
 
     show(`p${flow}2`);
   }
@@ -447,68 +438,63 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
     const s = state[flow];
     clearErr(errId);
 
-    const crush = document.getElementById(`crush${flow}${s.slot}`).value.trim().toLowerCase();
-    if (!crush) return showErr(errId, 'Please enter an email.');
-    if (crush === s.email) return showErr(errId, 'It has to be someone else 🌸');
-    if (s.submitted.includes(crush)) return showErr(errId, 'You already added this email.');
+    // Collect all filled emails
+    const crushes = [];
+    for (let i = 0; i < 3; i++) {
+      const val = document.getElementById(`crush${flow}${i}`).value.trim().toLowerCase();
+      if (val) crushes.push(val);
+    }
+
+    if (crushes.length === 0) return showErr(errId, 'Please enter at least one email.');
+
+    // Validate
+    for (const c of crushes) {
+      if (c === s.email) return showErr(errId, 'You can\'t add yourself 🌸');
+      if (crushes.filter(x => x === c).length > 1) return showErr(errId, 'You added the same email twice.');
+      if (s.submitted.includes(c)) return showErr(errId, `${c} was already added.`);
+    }
 
     const btnId = `btn${flow}2`;
     setBtn(btnId, true, '');
 
     try {
-      // Check mutual match — only against active (non-expired, non-freed) crushes
-      const { data: rev } = await sb.from('crushes').select('id, slot_freed, created_at, recipient_seen_at')
-        .eq('from_email', crush).eq('to_email', s.email).maybeSingle();
-      const revActive = rev && !rev.slot_freed && !isExpired(rev.created_at, rev.recipient_seen_at);
+      let matchFound = null;
 
-      await sb.from('crushes').insert({ from_email: s.email, to_email: crush, matched: !!revActive });
-      s.submitted.push(crush);
+      for (const crush of crushes) {
+        // Check mutual match
+        const { data: rev } = await sb.from('crushes').select('id, slot_freed, created_at, recipient_seen_at')
+          .eq('from_email', crush).eq('to_email', s.email).maybeSingle();
+        const revActive = rev && !rev.slot_freed && !isExpired(rev.created_at, rev.recipient_seen_at);
 
-      if (revActive) {
-        await sb.from('crushes').update({ matched: true }).eq('from_email', crush).eq('to_email', s.email);
-        await ejsSend(TPL_MATCH, { to_email: s.email, partner_email: crush });
-        await ejsSend(TPL_MATCH, { to_email: crush, partner_email: s.email });
-        document.getElementById('matchEmail').textContent = crush;
+        await sb.from('crushes').insert({ from_email: s.email, to_email: crush, matched: !!revActive });
+        s.submitted.push(crush);
+
+        if (revActive) {
+          await sb.from('crushes').update({ matched: true }).eq('from_email', crush).eq('to_email', s.email);
+          await ejsSend(TPL_MATCH, { to_email: s.email, partner_email: crush });
+          await ejsSend(TPL_MATCH, { to_email: crush, partner_email: s.email });
+          matchFound = crush;
+          break;
+        }
+
+        // Notify anonymously if first time
+        const { count } = await sb.from('crushes').select('id', { count: 'exact', head: true })
+          .eq('to_email', crush);
+        if (count <= 1) {
+          await ejsSend(TPL_NOTIFY, { to_email: crush });
+        }
+      }
+
+      setBtn(btnId, false, 'Send →');
+
+      if (matchFound) {
+        document.getElementById('matchEmail').textContent = matchFound;
         document.getElementById('matchTitle').textContent = flow === 'B'
           ? 'Oh wait — one of them has a crush on you too.'
           : 'They\'re your crush too.';
-        setBtn(btnId, false, 'Send →');
         show('pMatch');
-        return;
-      }
-
-      // No match — notify anonymously (only if they haven't been notified before)
-      // Count rows where this person is the recipient BEFORE we inserted (now there's at least 1)
-      const { count } = await sb.from('crushes').select('id', { count: 'exact', head: true })
-        .eq('to_email', crush);
-      if (count <= 1) {
-        await ejsSend(TPL_NOTIFY, { to_email: crush });
-      }
-
-      // Mark slot done
-      const slot = document.getElementById(`slot${flow}${s.slot}`);
-      slot.classList.remove('active-slot');
-      slot.classList.add('done');
-      document.getElementById(`crush${flow}${s.slot}`).disabled = true;
-      s.slot++;
-
-      // Show "I'm done" button after first crush sent
-      document.getElementById(`done${flow}2`).style.display = 'block';
-
-      if (s.slot >= 3) {
-        setBtn(btnId, false, 'Send →');
-        show(flow === 'A' ? 'pANoMatch' : 'pBNoMatch');
       } else {
-        document.getElementById(`slotsLeft${flow}`).textContent = 3 - s.slot;
-        const nextSlot = document.getElementById(`slot${flow}${s.slot}`);
-        const nextInput = document.getElementById(`crush${flow}${s.slot}`);
-        nextSlot.classList.add('active-slot');
-        nextInput.disabled = false;
-        nextInput.focus();
-        const label = s.slot === 2
-          ? (flow === 'A' ? 'Send last crush →' : 'Send last one →')
-          : (flow === 'A' ? 'Send →' : 'Send →');
-        setBtn(btnId, false, label);
+        show(flow === 'A' ? 'pANoMatch' : 'pBNoMatch');
       }
 
     } catch(e) {
@@ -516,10 +502,6 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       setBtn(btnId, false, 'Send →');
       console.error(e);
     }
-  }
-
-  function finishFlow(flow) {
-    show(flow === 'A' ? 'pANoMatch' : 'pBNoMatch');
   }
 
   document.addEventListener('keydown', e => {
