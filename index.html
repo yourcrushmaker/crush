@@ -578,8 +578,9 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
 
       for (const crush of crushes) {
         // Check mutual match
-        const { data: rev } = await sb.from('crushes').select('id, slot_freed, created_at, recipient_seen_at')
-          .eq('from_email', crush).eq('to_email', s.email).maybeSingle();
+        const { data: revArr } = await sb.from('crushes').select('id, slot_freed, created_at, recipient_seen_at')
+          .eq('from_email', crush).eq('to_email', s.email).limit(1);
+        const rev = revArr && revArr.length > 0 ? revArr[0] : null;
         const revActive = rev && !rev.slot_freed && !isExpired(rev.created_at, rev.recipient_seen_at);
 
         await sb.from('crushes').insert({ from_email: s.email, to_email: crush, matched: !!revActive });
@@ -587,6 +588,7 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
 
         if (revActive) {
           await sb.from('crushes').update({ matched: true }).eq('from_email', crush).eq('to_email', s.email);
+          await sb.from('crushes').update({ matched: true }).eq('from_email', s.email).eq('to_email', crush);
           await ejsSend(TPL_MATCH, { to_email: s.email, partner_email: crush });
           await ejsSend(TPL_MATCH, { to_email: crush, partner_email: s.email });
           matchFound = crush;
