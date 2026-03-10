@@ -109,6 +109,14 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(155,109,19
 .spin { display: inline-block; width: 14px; height: 14px; border: 1.5px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spinning 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
 @keyframes spinning { to { transform: rotate(360deg); } }
 
+
+/* Weekly winner */
+.winner-card { background: linear-gradient(135deg, var(--accent-bg) 0%, #f0e8fb 100%); border: 1.5px solid rgba(155,109,191,0.2); border-radius: var(--radius); padding: 1.2rem 1.5rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem; }
+.winner-crown { font-size: 1.6rem; flex-shrink: 0; }
+.winner-text { flex: 1; }
+.winner-label { font-size: 0.6rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.2rem; }
+.winner-name { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 1.2rem; color: var(--ink); }
+.winner-countdown { font-size: 0.65rem; color: var(--mid); margin-top: 0.2rem; }
 .panel { display: none; }
 .panel.active { display: block; }
 
@@ -142,6 +150,24 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
           <div class="entry-btn-sub">I want to tell them anonymously</div>
         </div>
       </button>
+      <button class="entry-btn" onclick="show('pCupid1')">
+        <div class="entry-btn-emoji">💘</div>
+        <div class="entry-btn-text">
+          <div class="entry-btn-title">I want to play Cupid</div>
+          <div class="entry-btn-sub">I think two people would be perfect together</div>
+        </div>
+      </button>
+    </div>
+    <!-- Weekly winner -->
+    <div id="weeklyWinner" style="margin-top:1.5rem;display:none;">
+      <div class="winner-card">
+        <div class="winner-crown">👑</div>
+        <div class="winner-text">
+          <div class="winner-label">Most admired this week</div>
+          <div class="winner-name" id="winnerName">—</div>
+          <div class="winner-countdown" id="winnerCountdown"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -293,6 +319,87 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
     </div>
   </div>
 
+
+  <!-- CUPID — Page C1: verify cupid email -->
+  <div id="pCupid1" class="panel">
+    <div class="hero">
+      <span class="hero-emoji">💘</span>
+      <h1>Play<br><em>Cupid.</em></h1>
+      <p class="hero-sub">Think two people would be perfect together? Let them know — from you.</p>
+    </div>
+    <div class="card">
+      <div class="field">
+        <label>Your email</label>
+        <input type="email" id="emailCupid" placeholder="prenom.nom@essec.edu">
+      </div>
+      <div class="err" id="errCupid1"></div>
+      <button class="btn" id="btnCupid1" onclick="sendCupidCode()">Continue →</button>
+      <button class="btn-soft" onclick="show('p0')">← Back</button>
+    </div>
+  </div>
+
+  <!-- CUPID — Page C1b: verify code -->
+  <div id="pCupid1b" class="panel">
+    <div class="hero">
+      <span class="hero-emoji">📬</span>
+      <h1>Check your<br><em>inbox</em></h1>
+      <p class="hero-sub">We sent a 6-digit code to <strong id="emailDisplayCupid" style="color:var(--ink)"></strong></p>
+    </div>
+    <div class="card">
+      <div class="field">
+        <label>6-digit code</label>
+        <input type="text" id="codeCupid" placeholder="123456" maxlength="6" inputmode="numeric" style="text-align:center;letter-spacing:0.3em;font-size:1.3rem;">
+      </div>
+      <div class="err" id="errCupid1b"></div>
+      <button class="btn" id="btnCupid1b" onclick="verifyCupidCode()">Verify →</button>
+      <button class="btn-soft" onclick="show('pCupid1')">← Use a different email</button>
+    </div>
+  </div>
+
+  <!-- CUPID — Page C2: enter two emails -->
+  <div id="pCupid2" class="panel">
+    <div class="hero">
+      <span class="hero-emoji">💘</span>
+      <h1>Who do you<br>want to <em>connect?</em></h1>
+      <p class="hero-sub">They'll both receive a message from a mutual friend — without knowing who.</p>
+    </div>
+    <div class="card">
+      <div class="field">
+        <label>Person 1</label>
+        <input type="email" id="cupidPerson1" placeholder="prenom.nom@essec.edu">
+      </div>
+      <div class="field">
+        <label>Person 2</label>
+        <input type="email" id="cupidPerson2" placeholder="prenom.nom@essec.edu">
+      </div>
+      <div class="err" id="errCupid2"></div>
+      <button class="btn" id="btnCupid2" onclick="submitCupid()">Send →</button>
+    </div>
+  </div>
+
+  <!-- CUPID — Done -->
+  <div id="pCupidDone" class="panel">
+    <div class="result-card">
+      <span class="result-emoji">💘</span>
+      <div class="result-title">Done,<br><em>Cupid.</em></div>
+      <p class="result-body">Both of them received a message from a mutual friend. If they both say yes, you'll all find out together.</p>
+      <div class="result-badge">✓ your identity stays hidden for now</div>
+    </div>
+  </div>
+
+  <!-- CUPID — Accept page (via link) -->
+  <div id="pCupidAccept" class="panel">
+    <div class="hero">
+      <span class="hero-emoji">💘</span>
+      <h1>A mutual friend<br>thinks you'd be <em>perfect</em> together.</h1>
+      <p class="hero-sub">They matched you with someone at ESSEC. Both of you need to say yes.</p>
+    </div>
+    <div class="card">
+      <div class="err" id="errCupidAccept"></div>
+      <button class="btn" id="btnCupidYes" onclick="respondCupid(true)">Yes, I'm curious 💜</button>
+      <button class="btn-soft" onclick="respondCupid(false)">No thanks</button>
+    </div>
+  </div>
 </main>
 <footer>crush · anonymous & confidential</footer>
 
@@ -523,6 +630,203 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       console.error(e);
     }
   }
+
+
+  // ─── WEEKLY WINNER ───────────────────────────────────────────
+  function getFirstName(email) {
+    const local = email.split('@')[0];
+    const first = local.split('.')[0];
+    return first.charAt(0).toUpperCase() + first.slice(1);
+  }
+
+  function getNextWednesday() {
+    const now = new Date();
+    const day = now.getDay(); // 0=Sun, 3=Wed
+    const daysUntilWed = (3 - day + 7) % 7 || 7;
+    const next = new Date(now);
+    next.setDate(now.getDate() + daysUntilWed);
+    next.setHours(0, 0, 0, 0);
+    return next;
+  }
+
+  function formatCountdown(ms) {
+    const d = Math.floor(ms / 86400000);
+    const h = Math.floor((ms % 86400000) / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    if (d > 0) return `Next update in ${d}d ${h}h`;
+    if (h > 0) return `Next update in ${h}h ${m}m`;
+    return `Next update in ${m}m`;
+  }
+
+  async function loadWeeklyWinner() {
+    try {
+      // Get start of current week (Monday)
+      const now = new Date();
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+      monday.setHours(0, 0, 0, 0);
+
+      const { data } = await sb.from('crushes')
+        .select('to_email')
+        .gte('created_at', monday.toISOString())
+        .eq('matched', false);
+
+      if (!data || data.length === 0) return;
+
+      // Count crushes per person
+      const counts = {};
+      data.forEach(d => {
+        counts[d.to_email] = (counts[d.to_email] || 0) + 1;
+      });
+
+      const maxCount = Math.max(...Object.values(counts));
+      const winners = Object.entries(counts)
+        .filter(([_, c]) => c === maxCount)
+        .map(([e]) => e)
+        .sort();
+
+      const winner = winners[0];
+      const firstName = getFirstName(winner);
+
+      document.getElementById('winnerName').textContent = firstName;
+
+      // Countdown to next Wednesday
+      const next = getNextWednesday();
+      const updateCountdown = () => {
+        const ms = next - new Date();
+        if (ms > 0) document.getElementById('winnerCountdown').textContent = formatCountdown(ms);
+      };
+      updateCountdown();
+      setInterval(updateCountdown, 60000);
+
+      document.getElementById('weeklyWinner').style.display = 'block';
+    } catch(e) { console.error('winner:', e); }
+  }
+
+  loadWeeklyWinner();
+
+  // ─── CUPID ────────────────────────────────────────────────────
+  const cupidState = { email: '', code: '', id: null, person: null };
+  const TPL_CUPID_INVITE = 'template_zhft4qt';
+
+  async function sendCupidCode() {
+    const errId = 'errCupid1';
+    clearErr(errId);
+    const val = document.getElementById('emailCupid').value.trim().toLowerCase();
+    if (!val) return showErr(errId, 'Please enter your email.');
+    if (!isEssecEmail(val)) return showErr(errId, 'Please use your ESSEC email — prenom.nom@essec.edu');
+
+    cupidState.email = val;
+    cupidState.code = makeCode();
+    setBtn('btnCupid1', true, '');
+    try {
+      await ejsSend(TPL_CODE, { to_email: val, code: cupidState.code });
+      document.getElementById('emailDisplayCupid').textContent = val;
+      show('pCupid1b');
+    } catch { showErr(errId, 'Could not send — please try again.'); }
+    setBtn('btnCupid1', false, 'Continue →');
+  }
+
+  async function verifyCupidCode() {
+    const errId = 'errCupid1b';
+    clearErr(errId);
+    const entered = document.getElementById('codeCupid').value.trim();
+    if (!entered) return showErr(errId, 'Please enter the code.');
+    if (entered !== cupidState.code) return showErr(errId, 'Incorrect code — check your inbox.');
+    show('pCupid2');
+  }
+
+  async function submitCupid() {
+    const errId = 'errCupid2';
+    clearErr(errId);
+    const p1 = document.getElementById('cupidPerson1').value.trim().toLowerCase();
+    const p2 = document.getElementById('cupidPerson2').value.trim().toLowerCase();
+
+    if (!p1 || !p2) return showErr(errId, 'Please enter both emails.');
+    if (!isEssecEmail(p1) || !isEssecEmail(p2)) return showErr(errId, 'Please use ESSEC emails only.');
+    if (p1 === p2) return showErr(errId, 'Please enter two different people.');
+    if (p1 === cupidState.email || p2 === cupidState.email) return showErr(errId, 'You can\'t match yourself 🌸');
+
+    setBtn('btnCupid2', true, '');
+    try {
+      const { data, error } = await sb.from('cupid').insert({
+        cupid_email: cupidState.email,
+        person1_email: p1,
+        person2_email: p2
+      }).select().single();
+
+      if (error) throw error;
+      const id = data.id;
+
+      // Send invite to both
+      const link1 = `${window.location.origin}${window.location.pathname}?cupid=${id}&person=1`;
+      const link2 = `${window.location.origin}${window.location.pathname}?cupid=${id}&person=2`;
+
+      await ejsSend(TPL_CUPID_INVITE, { to_email: p1, link: link1 });
+      await ejsSend(TPL_CUPID_INVITE, { to_email: p2, link: link2 });
+
+      show('pCupidDone');
+    } catch(e) {
+      showErr(errId, 'Something went wrong — please try again.');
+      console.error(e);
+    }
+    setBtn('btnCupid2', false, 'Send →');
+  }
+
+  async function respondCupid(accepted) {
+    const errId = 'errCupidAccept';
+    clearErr(errId);
+    if (!cupidState.id || !cupidState.person) return;
+
+    try {
+      const field = cupidState.person === '1' ? 'person1_accepted' : 'person2_accepted';
+      await sb.from('cupid').update({ [field]: accepted }).eq('id', cupidState.id);
+
+      if (!accepted) { show('p0'); return; }
+
+      // Check if other person also accepted
+      const { data } = await sb.from('cupid').select('*').eq('id', cupidState.id).single();
+      const otherAccepted = cupidState.person === '1' ? data.person2_accepted : data.person1_accepted;
+
+      if (otherAccepted === true) {
+        // Both accepted — reveal
+        const myEmail = cupidState.person === '1' ? data.person1_email : data.person2_email;
+        const otherEmail = cupidState.person === '1' ? data.person2_email : data.person1_email;
+        await ejsSend(TPL_MATCH, { to_email: myEmail, partner_email: otherEmail + ' (introduced by ' + data.cupid_email + ')' });
+        await ejsSend(TPL_MATCH, { to_email: otherEmail, partner_email: myEmail + ' (introduced by ' + data.cupid_email + ')' });
+      }
+
+      // Show thanks page
+      const card = document.querySelector('#pCupidAccept .result-card') || document.querySelector('#pCupidAccept .card');
+      document.getElementById('pCupidAccept').innerHTML = `
+        <div class="result-card" style="text-align:center;padding:2.5rem 2rem;">
+          <span class="result-emoji" style="font-size:2.5rem;display:block;margin-bottom:1rem;">💜</span>
+          <div class="result-title" style="font-family:'Instrument Serif',serif;font-size:1.8rem;margin-bottom:0.8rem;">
+            ${otherAccepted === true ? 'It\'s a <em style=\"color:var(--accent)\">match!</em>' : 'You\'re <em style=\"color:var(--accent)\">in.</em>'}
+          </div>
+          <p class="result-body" style="font-size:0.82rem;color:#78716c;line-height:1.65;">
+            ${otherAccepted === true ? 'Check your email — you both said yes.' : 'Waiting for the other person. If they say yes too, you\'ll both find out.'}
+          </p>
+        </div>`;
+    } catch(e) {
+      showErr(errId, 'Something went wrong — please try again.');
+      console.error(e);
+    }
+  }
+
+  // Handle Cupid invite link
+  async function handleCupidLink() {
+    const params = new URLSearchParams(window.location.search);
+    const cupidId = params.get('cupid');
+    const person = params.get('person');
+    if (!cupidId || !person) return;
+
+    cupidState.id = cupidId;
+    cupidState.person = person;
+    show('pCupidAccept');
+  }
+
+  handleCupidLink();
 
   document.addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;
