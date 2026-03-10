@@ -159,15 +159,10 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       </button>
     </div>
     <!-- Weekly winner -->
-    <div id="weeklyWinner" style="margin-top:1.5rem;display:none;">
-      <div class="winner-card">
-        <div class="winner-crown">👑</div>
-        <div class="winner-text">
-          <div class="winner-label">Most admired this week</div>
-          <div class="winner-name" id="winnerName">—</div>
-          <div class="winner-countdown" id="winnerCountdown"></div>
-        </div>
-      </div>
+    <div id="weeklyWinner" style="margin-top:2.5rem;display:none;text-align:center;padding-top:1.5rem;border-top:1px solid var(--faint);">
+      <div style="font-size:0.6rem;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--mid);margin-bottom:0.6rem;">Most admired this week</div>
+      <div id="winnerName" style="font-family:'Instrument Serif',serif;font-size:2.2rem;font-weight:400;color:var(--ink);margin-bottom:0.5rem;letter-spacing:-0.01em;">—</div>
+      <div id="winnerCountdown" style="font-size:0.68rem;color:var(--mid);font-family:'Inter',sans-serif;font-weight:300;letter-spacing:0.02em;"></div>
     </div>
   </div>
 
@@ -325,7 +320,7 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
     <div class="hero">
       <span class="hero-emoji">💘</span>
       <h1>Play<br><em>Cupid.</em></h1>
-      <p class="hero-sub">Think two people would be perfect together? Let them know — from you.</p>
+      <p class="hero-sub">They'll each get a message from a mutual friend.</p>
     </div>
     <div class="card">
       <div class="field">
@@ -361,7 +356,7 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
     <div class="hero">
       <span class="hero-emoji">💘</span>
       <h1>Who do you<br>want to <em>connect?</em></h1>
-      <p class="hero-sub">They'll both receive a message from a mutual friend — without knowing who.</p>
+      <p class="hero-sub">They'll each get a message from a mutual friend.</p>
     </div>
     <div class="card">
       <div class="field">
@@ -653,9 +648,10 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
     const d = Math.floor(ms / 86400000);
     const h = Math.floor((ms % 86400000) / 3600000);
     const m = Math.floor((ms % 3600000) / 60000);
-    if (d > 0) return `Next update in ${d}d ${h}h`;
-    if (h > 0) return `Next update in ${h}h ${m}m`;
-    return `Next update in ${m}m`;
+    const s = Math.floor((ms % 60000) / 1000);
+    if (d > 0) return `Next update in ${d}d ${h}h ${m}m`;
+    if (h > 0) return `Next update in ${h}h ${m}m ${s}s`;
+    return `Next update in ${m}m ${s}s`;
   }
 
   async function loadWeeklyWinner() {
@@ -697,7 +693,7 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
         if (ms > 0) document.getElementById('winnerCountdown').textContent = formatCountdown(ms);
       };
       updateCountdown();
-      setInterval(updateCountdown, 60000);
+      setInterval(updateCountdown, 1000);
 
       document.getElementById('weeklyWinner').style.display = 'block';
     } catch(e) { console.error('winner:', e); }
@@ -749,6 +745,17 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
 
     setBtn('btnCupid2', true, '');
     try {
+      // Max 1 Cupid invite received per person per week
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { count: c1 } = await sb.from('cupid').select('id', { count: 'exact', head: true })
+        .gte('created_at', weekAgo)
+        .or(`person1_email.eq.${p1},person2_email.eq.${p1}`);
+      const { count: c2 } = await sb.from('cupid').select('id', { count: 'exact', head: true })
+        .gte('created_at', weekAgo)
+        .or(`person1_email.eq.${p2},person2_email.eq.${p2}`);
+      if (c1 > 0) return showErr('errCupid2', `${getFirstName(p1)} already received a Cupid invite this week.`);
+      if (c2 > 0) return showErr('errCupid2', `${getFirstName(p2)} already received a Cupid invite this week.`);
+
       const { data, error } = await sb.from('cupid').insert({
         cupid_email: cupidState.email,
         person1_email: p1,
