@@ -407,10 +407,16 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
   // All sensitive operations go through the Edge Function — no keys exposed here
   const API = 'https://awksuzkrchkjgmtauzjw.supabase.co/functions/v1/index';
 
+  const ANON_KEY = 'sb_publishable_kIPnc2y8gd-Y41S5jTL3Aw_xndev3PZ';
+
   async function api(action, params = {}) {
     const r = await fetch(API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ANON_KEY}`,
+        'apikey': ANON_KEY
+      },
       body: JSON.stringify({ action, ...params })
     });
     const data = await r.json();
