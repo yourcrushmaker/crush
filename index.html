@@ -400,23 +400,44 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       <button class="btn-soft" onclick="respondCupid(false)">No thanks</button>
     </div>
   </div>
+  <!-- UNSUBSCRIBE page -->
+  <div id="pUnsub" class="panel">
+    <div class="hero">
+      <span class="hero-emoji">🔕</span>
+      <h1>Unsubscribe</h1>
+      <p class="hero-sub">You won't receive any more emails from crush.</p>
+    </div>
+    <div class="card">
+      <div class="field">
+        <label>Your email</label>
+        <input type="email" id="emailUnsub" placeholder="prenom.nom@essec.edu">
+      </div>
+      <div class="err" id="errUnsub"></div>
+      <button class="btn" id="btnUnsub" onclick="doUnsubscribe()">Unsubscribe →</button>
+      <button class="btn-back" onclick="show('p0')">← Back</button>
+    </div>
+  </div>
+
+  <!-- UNSUBSCRIBE done -->
+  <div id="pUnsubDone" class="panel">
+    <div class="result-card">
+      <span class="result-emoji">🔕</span>
+      <div class="result-title">Done.<br><em>Unsubscribed.</em></div>
+      <p class="result-body">You won't receive any more emails from crush. You can always come back if you change your mind.</p>
+    </div>
+  </div>
+
 </main>
-<footer>crush · anonymous & confidential</footer>
+<footer>crush · anonymous & confidential · <a href="?unsub=1" style="color:inherit;text-decoration:underline;">unsubscribe</a></footer>
 
 <script>
   // All sensitive operations go through the Edge Function — no keys exposed here
   const API = 'https://awksuzkrchkjgmtauzjw.supabase.co/functions/v1/index';
 
-  const ANON_KEY = 'sb_publishable_kIPnc2y8gd-Y41S5jTL3Aw_xndev3PZ';
-
   async function api(action, params = {}) {
     const r = await fetch(API, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ANON_KEY}`,
-        'apikey': ANON_KEY
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, ...params })
     });
     const data = await r.json();
@@ -447,7 +468,7 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
 
   function makeCode() { return Math.floor(100000 + Math.random() * 900000).toString(); }
 
-  const ALLOWED_EMAILS = ['beauty.cutie.girly@gmail.com', 'sofiacarbes@gmail.com', 'sihem.djaber1@gmail.com'];
+  const ALLOWED_EMAILS = ['beauty.cutie.girly@gmail.com', 'sofiacarbes@gmail.com', 'sihem.djaber1@gmail.com', 'sihem.djaber@essec.edu'];
 
   function isEssecEmail(email) {
     if (ALLOWED_EMAILS.includes(email)) return true;
@@ -723,6 +744,33 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
   }
 
   handleCupidLink();
+
+  async function doUnsubscribe() {
+    const errId = 'errUnsub';
+    clearErr(errId);
+    const email = document.getElementById('emailUnsub').value.trim().toLowerCase();
+    if (!email) return showErr(errId, 'Please enter your email.');
+    setBtn('btnUnsub', true, '');
+    try {
+      await api('unsubscribe', { email });
+      show('pUnsubDone');
+    } catch(e) {
+      showErr(errId, 'Something went wrong — please try again.');
+    }
+    setBtn('btnUnsub', false, 'Unsubscribe →');
+  }
+
+  // Handle ?unsub=email from email footer — auto unsubscribe in 1 click
+  (async () => {
+    const unsubEmail = new URLSearchParams(window.location.search).get('unsub');
+    if (!unsubEmail) return;
+    if (unsubEmail === '1') { show('pUnsub'); return; }
+    // Auto-unsubscribe directly
+    try {
+      await api('unsubscribe', { email: decodeURIComponent(unsubEmail) });
+    } catch(e) {}
+    show('pUnsubDone');
+  })();
 
   document.addEventListener('keydown', e => {
     if (e.key !== 'Enter') return;
