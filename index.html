@@ -68,6 +68,8 @@ input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(155,109,19
 .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
 .btn-soft { width: 100%; padding: 0.8rem; background: none; border: 1.5px solid var(--faint); border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 300; color: var(--mid); cursor: pointer; margin-top: 0.5rem; transition: all 0.18s; }
 .btn-soft:hover { border-color: var(--mid); color: var(--ink); }
+.btn-back { width: 100%; padding: 0.8rem; background: none; border: none; border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 0.82rem; font-weight: 400; color: var(--accent); cursor: pointer; margin-top: 0.3rem; transition: all 0.18s; }
+.btn-back:hover { color: #7c4fa0; }
 
 .err { font-size: 0.75rem; color: #be123c; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 10px; padding: 0.65rem 0.9rem; margin-top: 0.7rem; display: none; }
 .err.show { display: block; }
@@ -180,6 +182,7 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       </div>
       <div class="err" id="errA1"></div>
       <button class="btn" id="btnA1" onclick="sendCode('A')">Find out →</button>
+      <button class="btn-back" onclick="show('p0')">← Back</button>
     </div>
   </div>
 
@@ -197,7 +200,7 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       </div>
       <div class="err" id="errA1b"></div>
       <button class="btn" id="btnA1b" onclick="verifyCode('A')">Verify →</button>
-      <button class="btn-soft" onclick="show('pA1')">← Use a different email</button>
+      <button class="btn-back" onclick="show('pA1')">← Use a different email</button>
     </div>
   </div>
 
@@ -216,6 +219,7 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       </div>
       <div class="err" id="errA2"></div>
       <button class="btn" id="btnA2" onclick="submitCrush('A')">Send →</button>
+      <button class="btn-back" onclick="show('p0')">← Back</button>
     </div>
   </div>
 
@@ -233,6 +237,7 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       </div>
       <div class="err" id="errB1"></div>
       <button class="btn" id="btnB1" onclick="sendCode('B')">Continue →</button>
+      <button class="btn-back" onclick="show('p0')">← Back</button>
     </div>
   </div>
 
@@ -250,7 +255,7 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       </div>
       <div class="err" id="errB1b"></div>
       <button class="btn" id="btnB1b" onclick="verifyCode('B')">Verify →</button>
-      <button class="btn-soft" onclick="show('pB1')">← Use a different email</button>
+      <button class="btn-back" onclick="show('pB1')">← Use a different email</button>
     </div>
   </div>
 
@@ -270,6 +275,7 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       </div>
       <div class="err" id="errB2"></div>
       <button class="btn" id="btnB2" onclick="submitCrush('B')">Send →</button>
+      <button class="btn-back" onclick="show('p0')">← Back</button>
     </div>
   </div>
 
@@ -329,7 +335,7 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       </div>
       <div class="err" id="errCupid1"></div>
       <button class="btn" id="btnCupid1" onclick="sendCupidCode()">Continue →</button>
-      <button class="btn-soft" onclick="show('p0')">← Back</button>
+      <button class="btn-back" onclick="show('p0')">← Back</button>
     </div>
   </div>
 
@@ -347,7 +353,7 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       </div>
       <div class="err" id="errCupid1b"></div>
       <button class="btn" id="btnCupid1b" onclick="verifyCupidCode()">Verify →</button>
-      <button class="btn-soft" onclick="show('pCupid1')">← Use a different email</button>
+      <button class="btn-back" onclick="show('pCupid1')">← Use a different email</button>
     </div>
   </div>
 
