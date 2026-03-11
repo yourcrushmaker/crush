@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>crush.</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
@@ -405,16 +404,19 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
 <footer>crush · anonymous & confidential</footer>
 
 <script>
-  const SUPABASE_URL = 'https://awksuzkrchkjgmtauzjw.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_kIPnc2y8gd-Y41S5jTL3Aw_xndev3PZ';
-  const EJS_SERVICE  = 'service_or7bbnf';
-  const EJS_PUBKEY   = '3nYkEJC-JDmRAyUS2';
-  const TPL_CODE     = 'template_noqo14i';
-  const TPL_NOTIFY   = 'template_fd2fbgj';
-  const TPL_MATCH    = 'template_6385v2x';
-  const TPL_RENOTIFY = 'template_67v4jce';
+  // All sensitive operations go through the Edge Function — no keys exposed here
+  const API = 'https://awksuzkrchkjgmtauzjw.supabase.co/functions/v1/crush-api';
 
-  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  async function api(action, params = {}) {
+    const r = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, ...params })
+    });
+    const data = await r.json();
+    if (!r.ok || data.error) throw new Error(data.error || 'Server error');
+    return data;
+  }
 
   // State per flow
   const state = {
@@ -450,14 +452,7 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
     show(flow === 'A' ? 'pA1' : 'pB1');
   }
 
-  async function ejsSend(tpl, params) {
-    const r = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ service_id: EJS_SERVICE, template_id: tpl, user_id: EJS_PUBKEY, template_params: params })
-    });
-    if (!r.ok) throw new Error('email failed');
-  }
+  // emails handled server-side
 
   async function sendCode(flow) {
     const errId = `err${flow}1`;
@@ -470,11 +465,10 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
     if (!isEssecEmail(val)) return showErr(errId, 'Please use your ESSEC email — prenom.nom@essec.edu');
 
     state[flow].email = val;
-    state[flow].code = makeCode();
     setBtn(btnId, true, '');
 
     try {
-      await ejsSend(TPL_CODE, { to_email: val, code: state[flow].code });
+      await api('send_code', { email: val });
       document.getElementById(`emailDisplay${flow}`).textContent = val;
       show(`p${flow}1b`);
     } catch { showErr(errId, 'Could not send — please try again.'); }
@@ -500,40 +494,30 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
 
     const entered = document.getElementById(inputId).value.trim();
     if (!entered) return showErr(errId, 'Please enter the code.');
-    if (entered !== state[flow].code) return showErr(errId, 'Incorrect code — check your inbox.');
 
-    // Mark recipient_seen_at on all crushes where this user is the recipient
-    const now = new Date().toISOString();
-    await sb.from('crushes')
-      .update({ recipient_seen_at: now })
-      .eq('to_email', state[flow].email)
-      .is('recipient_seen_at', null);
+    try {
+      const res = await api('verify_code', { email: state[flow].email, code: entered });
+      state[flow].code = entered;
 
-    const { data: allCrushes } = await sb.from('crushes').select('id, to_email, matched, created_at, recipient_seen_at, slot_freed')
-      .eq('from_email', state[flow].email);
+      if (res.match) {
+        document.getElementById('matchEmail').textContent = res.match;
+        document.getElementById('matchTitle').textContent = flow === 'B'
+          ? 'Oh wait — one of them has a crush on you too.'
+          : 'They\'re your crush too.';
+        show('pMatch');
+        return;
+      }
 
-    if (!allCrushes) { show(`p${flow}2`); return; }
-
-    // Free slots for expired non-matched crushes (keep in DB)
-    for (const d of allCrushes.filter(d => !d.matched && isExpired(d.created_at, d.recipient_seen_at))) {
-      await sb.from('crushes').update({ slot_freed: true }).eq('id', d.id);
+      state[flow].slot = res.active || 0;
+      if (state[flow].slot >= 3) { show('pAlready'); return; }
+      show(`p${flow}2`);
+    } catch(e) {
+      showErr(errId, e.message === 'Incorrect code' ? 'Incorrect code — check your inbox.' : 'Something went wrong.');
     }
+  }
 
-    // Active = matched or not expired and not slot_freed
-    const active = allCrushes.filter(d => d.matched || (!d.slot_freed && !isExpired(d.created_at, d.recipient_seen_at)));
-
-    // Check for match
-    const match = active.find(d => d.matched);
-    if (match) {
-      document.getElementById('matchEmail').textContent = match.to_email;
-      document.getElementById('matchTitle').textContent = flow === 'B'
-        ? 'Oh wait — one of them has a crush on you too.'
-        : 'They\'re your crush too.';
-      show('pMatch');
-      return;
-    }
-
-    // Restore submitted slots
+  // DEAD CODE stub kept for slot restoration (now server-side)
+  function _verifyCodeLegacySlots(flow, active) {
     active.forEach((d, i) => {
       state[flow].submitted.push(d.to_email);
       const slot = document.getElementById(`slot${flow}${i}`);
@@ -555,7 +539,6 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
     const s = state[flow];
     clearErr(errId);
 
-    // Collect all filled emails
     const crushes = [];
     for (let i = 0; i < 3; i++) {
       const val = document.getElementById(`crush${flow}${i}`).value.trim().toLowerCase();
@@ -563,15 +546,9 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
     }
 
     if (crushes.length === 0) return showErr(errId, 'Please enter at least one email.');
-
-    // Validate ESSEC format
     for (const c of crushes) {
-      if (!isEssecEmail(c)) return showErr(errId, `${c} — please use ESSEC emails only (prenom.nom@essec.edu)`);
-    }
-
-    // Validate
-    for (const c of crushes) {
-      if (c === s.email) return showErr(errId, 'You can\'t add yourself 🌸');
+      if (!isEssecEmail(c)) return showErr(errId, `${c} — please use ESSEC emails only`);
+      if (c === s.email) return showErr(errId, "You can't add yourself 🌸");
       if (crushes.filter(x => x === c).length > 1) return showErr(errId, 'You added the same email twice.');
       if (s.submitted.includes(c)) return showErr(errId, `${c} was already added.`);
     }
@@ -580,45 +557,11 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
     setBtn(btnId, true, '');
 
     try {
-      let matchFound = null;
-
-      for (const crush of crushes) {
-        // Check mutual match
-        const { data: revArr } = await sb.from('crushes').select('id, slot_freed, created_at, recipient_seen_at')
-          .eq('from_email', crush).eq('to_email', s.email).limit(1);
-        const rev = revArr && revArr.length > 0 ? revArr[0] : null;
-        const revActive = rev && !rev.slot_freed && !isExpired(rev.created_at, rev.recipient_seen_at);
-
-        await sb.from('crushes').insert({ from_email: s.email, to_email: crush, matched: !!revActive });
-        s.submitted.push(crush);
-
-        if (revActive) {
-          await sb.from('crushes').update({ matched: true }).eq('from_email', crush).eq('to_email', s.email);
-          await sb.from('crushes').update({ matched: true }).eq('from_email', s.email).eq('to_email', crush);
-          await ejsSend(TPL_MATCH, { to_email: s.email, partner_email: crush });
-          await ejsSend(TPL_MATCH, { to_email: crush, partner_email: s.email });
-          matchFound = crush;
-          break;
-        }
-
-        // Notify — once per week max
-        const { data: notif } = await sb.from('notifications').select('last_notified_at')
-          .eq('email', crush).maybeSingle();
-        
-        const shouldNotify = !notif || 
-          (new Date() - new Date(notif.last_notified_at)) > 7 * 24 * 60 * 60 * 1000;
-        
-        if (shouldNotify) {
-          const tpl = notif ? TPL_RENOTIFY : TPL_NOTIFY;
-          await ejsSend(tpl, { to_email: crush });
-          await sb.from('notifications').upsert({ email: crush, last_notified_at: new Date().toISOString() });
-        }
-      }
-
+      const res = await api('submit_crush', { email: s.email, code: s.code, crushes });
       setBtn(btnId, false, 'Send →');
 
-      if (matchFound) {
-        document.getElementById('matchEmail').textContent = matchFound;
+      if (res.match) {
+        document.getElementById('matchEmail').textContent = res.match;
         document.getElementById('matchTitle').textContent = flow === 'B'
           ? 'Oh wait — one of them has a crush on you too.'
           : 'They\'re your crush too.';
@@ -626,11 +569,9 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
       } else {
         show(flow === 'A' ? 'pANoMatch' : 'pBNoMatch');
       }
-
     } catch(e) {
-      showErr(errId, 'Something went wrong — please try again.');
+      showErr(errId, e.message || 'Something went wrong — please try again.');
       setBtn(btnId, false, 'Send →');
-      console.error(e);
     }
   }
 
@@ -664,35 +605,9 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
 
   async function loadWeeklyWinner() {
     try {
-      // Get start of current week (Monday)
-      const now = new Date();
-      const monday = new Date(now);
-      monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-      monday.setHours(0, 0, 0, 0);
-
-      const { data } = await sb.from('crushes')
-        .select('to_email')
-        .gte('created_at', monday.toISOString())
-        .eq('matched', false);
-
-      if (!data || data.length === 0) return;
-
-      // Count crushes per person
-      const counts = {};
-      data.forEach(d => {
-        counts[d.to_email] = (counts[d.to_email] || 0) + 1;
-      });
-
-      const maxCount = Math.max(...Object.values(counts));
-      const winners = Object.entries(counts)
-        .filter(([_, c]) => c === maxCount)
-        .map(([e]) => e)
-        .sort();
-
-      const winner = winners[0];
-      const firstName = getFirstName(winner);
-
-      document.getElementById('winnerName').textContent = firstName;
+      const res = await api('weekly_winner');
+      if (!res.winner) return;
+      document.getElementById('winnerName').textContent = res.winner;
 
       // Countdown to next Wednesday
       const next = getNextWednesday();
@@ -721,10 +636,9 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
     if (!isEssecEmail(val)) return showErr(errId, 'Please use your ESSEC email — prenom.nom@essec.edu');
 
     cupidState.email = val;
-    cupidState.code = makeCode();
     setBtn('btnCupid1', true, '');
     try {
-      await ejsSend(TPL_CODE, { to_email: val, code: cupidState.code });
+      await api('send_code', { email: val });
       document.getElementById('emailDisplayCupid').textContent = val;
       show('pCupid1b');
     } catch { showErr(errId, 'Could not send — please try again.'); }
@@ -736,7 +650,9 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
     clearErr(errId);
     const entered = document.getElementById('codeCupid').value.trim();
     if (!entered) return showErr(errId, 'Please enter the code.');
-    if (entered !== cupidState.code) return showErr(errId, 'Incorrect code — check your inbox.');
+    // Store code for later server-side verification
+    cupidState.code = entered;
+    // We'll verify server-side at submit time
     show('pCupid2');
   }
 
@@ -747,43 +663,19 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
     const p2 = document.getElementById('cupidPerson2').value.trim().toLowerCase();
 
     if (!p1 || !p2) return showErr(errId, 'Please enter both emails.');
-    if (!isEssecEmail(p1) || !isEssecEmail(p2)) return showErr(errId, 'Please use ESSEC emails only.');
-    if (p1 === p2) return showErr(errId, 'Please enter two different people.');
-    if (p1 === cupidState.email || p2 === cupidState.email) return showErr(errId, 'You can\'t match yourself 🌸');
 
     setBtn('btnCupid2', true, '');
     try {
-      // Max 1 Cupid invite received per person per week
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      const { count: c1 } = await sb.from('cupid').select('id', { count: 'exact', head: true })
-        .gte('created_at', weekAgo)
-        .or(`person1_email.eq.${p1},person2_email.eq.${p1}`);
-      const { count: c2 } = await sb.from('cupid').select('id', { count: 'exact', head: true })
-        .gte('created_at', weekAgo)
-        .or(`person1_email.eq.${p2},person2_email.eq.${p2}`);
-      if (c1 > 0) return showErr('errCupid2', `${getFirstName(p1)} already received a Cupid invite this week.`);
-      if (c2 > 0) return showErr('errCupid2', `${getFirstName(p2)} already received a Cupid invite this week.`);
-
-      const { data, error } = await sb.from('cupid').insert({
-        cupid_email: cupidState.email,
-        person1_email: p1,
-        person2_email: p2
-      }).select().single();
-
-      if (error) throw error;
-      const id = data.id;
-
-      // Send invite to both
-      const link1 = `${window.location.origin}${window.location.pathname}?cupid=${id}&person=1`;
-      const link2 = `${window.location.origin}${window.location.pathname}?cupid=${id}&person=2`;
-
-      await ejsSend(TPL_CUPID_INVITE, { to_email: p1, link: link1 });
-      await ejsSend(TPL_CUPID_INVITE, { to_email: p2, link: link2 });
-
+      await api('submit_cupid', {
+        email: cupidState.email,
+        code: cupidState.code,
+        person1: p1,
+        person2: p2,
+        origin: window.location.origin + window.location.pathname
+      });
       show('pCupidDone');
     } catch(e) {
-      showErr(errId, 'Something went wrong — please try again.');
-      console.error(e);
+      showErr(errId, e.message || 'Something went wrong — please try again.');
     }
     setBtn('btnCupid2', false, 'Send →');
   }
@@ -793,39 +685,22 @@ footer { text-align: center; padding: 0 1.5rem 3rem; font-size: 0.65rem; letter-
     clearErr(errId);
     if (!cupidState.id || !cupidState.person) return;
 
+    if (!accepted) { show('p0'); return; }
+
     try {
-      const field = cupidState.person === '1' ? 'person1_accepted' : 'person2_accepted';
-      await sb.from('cupid').update({ [field]: accepted }).eq('id', cupidState.id);
-
-      if (!accepted) { show('p0'); return; }
-
-      // Check if other person also accepted
-      const { data } = await sb.from('cupid').select('*').eq('id', cupidState.id).single();
-      const otherAccepted = cupidState.person === '1' ? data.person2_accepted : data.person1_accepted;
-
-      if (otherAccepted === true) {
-        // Both accepted — reveal
-        const myEmail = cupidState.person === '1' ? data.person1_email : data.person2_email;
-        const otherEmail = cupidState.person === '1' ? data.person2_email : data.person1_email;
-        await ejsSend(TPL_MATCH, { to_email: myEmail, partner_email: otherEmail + ' (introduced by ' + data.cupid_email + ')' });
-        await ejsSend(TPL_MATCH, { to_email: otherEmail, partner_email: myEmail + ' (introduced by ' + data.cupid_email + ')' });
-      }
-
-      // Show thanks page
-      const card = document.querySelector('#pCupidAccept .result-card') || document.querySelector('#pCupidAccept .card');
+      const res = await api('respond_cupid', { id: cupidState.id, person: cupidState.person, accepted: true });
       document.getElementById('pCupidAccept').innerHTML = `
         <div class="result-card" style="text-align:center;padding:2.5rem 2rem;">
-          <span class="result-emoji" style="font-size:2.5rem;display:block;margin-bottom:1rem;">💜</span>
-          <div class="result-title" style="font-family:'Instrument Serif',serif;font-size:1.8rem;margin-bottom:0.8rem;">
-            ${otherAccepted === true ? 'It\'s a <em style=\"color:var(--accent)\">match!</em>' : 'You\'re <em style=\"color:var(--accent)\">in.</em>'}
+          <span style="font-size:2.5rem;display:block;margin-bottom:1rem;">💜</span>
+          <div style="font-family:'Instrument Serif',serif;font-size:1.8rem;line-height:1.2;margin-bottom:0.8rem;">
+            ${res.matched ? "It's a <em style='color:var(--accent)'>match!</em>" : "You're <em style='color:var(--accent)'>in.</em>"}
           </div>
-          <p class="result-body" style="font-size:0.82rem;color:#78716c;line-height:1.65;">
-            ${otherAccepted === true ? 'Check your email — you both said yes.' : 'Waiting for the other person. If they say yes too, you\'ll both find out.'}
+          <p style="font-size:0.82rem;color:#78716c;line-height:1.65;">
+            ${res.matched ? 'Check your email — you both said yes.' : 'Waiting for the other person. If they say yes too, you\'ll both find out.'}
           </p>
         </div>`;
     } catch(e) {
       showErr(errId, 'Something went wrong — please try again.');
-      console.error(e);
     }
   }
 
